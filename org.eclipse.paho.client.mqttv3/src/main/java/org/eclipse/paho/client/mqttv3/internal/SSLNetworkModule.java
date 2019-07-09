@@ -143,7 +143,11 @@ public class SSLNetworkModule extends TCPNetworkModule {
 			sslParameters.setServerNames(sniHostNames);
 			((SSLSocket)socket).setSSLParameters(sslParameters);
 		} catch(NoClassDefFoundError e) {
-			// Android < 7.0
+			try {
+				socket.getClass().getMethod("setHostname", String.class).invoke(socket, host);
+			} catch (Throwable reflectError) {
+				reflectError.printStackTrace();
+			}
 		}
 
 		// If default Hostname verification is enabled, use the same method that is used with HTTPS
@@ -156,7 +160,14 @@ public class SSLNetworkModule extends TCPNetworkModule {
 				// Android < 7.0
 			}
 		}
-		((SSLSocket) socket).startHandshake();
+
+		try {
+			((SSLSocket) socket).startHandshake();
+		} catch(Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
+		
 		if (hostnameVerifier != null && !this.httpsHostnameVerificationEnabled) {
 			SSLSession session = ((SSLSocket) socket).getSession();
 			if(!hostnameVerifier.verify(host, session)) {
